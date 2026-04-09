@@ -6,8 +6,6 @@ import Settings from '../pages/private/Settings'
 import MyQuizzes from '../pages/private/MyQuizzes'
 
 const PrivateRoute = ({ children }) => {
-  // This should contain authentication logic
-  // For now, just return children as is
   return children
 }
 
