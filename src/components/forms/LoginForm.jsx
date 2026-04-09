@@ -1,35 +1,32 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Input from "../ui/Input";
-import Button from "../ui/Button";
-import axios from "axios";
 import toast from "react-hot-toast";
+import Button from "../ui/Button";
+import { login } from "../../api/auth";
+import { useValidation } from "../../hooks/useValidation";
+import { loginSchema } from "../../validation/login.shema";
+
 
 export default function LoginForm() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const { register, handleSubmit, formState: { errors } } = useValidation(loginSchema);
   const [remeberMe, setRemeberMe] = useState(false)
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const onSubmit = async (data) => {
     if (loading) return;
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:8000/api/login', {
-        email: email,
-        password: password
-      });
+      const res = await login(data.email, data.password)
       if (remeberMe) {
-        localStorage.setItem('user', JSON.stringify(res.data))
+        localStorage.setItem('user', JSON.stringify(res))
       }
-      sessionStorage.setItem('user', JSON.stringify(res.data))
-      toast.success(res.data.message);
+      sessionStorage.setItem('user', JSON.stringify(res))
+      toast.success(res.message);
       navigate('/');
     } catch (err) {
-      toast.error(err.response?.data?.message || "Login failed");
+      toast.error(err.response?.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -41,19 +38,23 @@ export default function LoginForm() {
         Login
       </h2>
 
-      {/* Message Display */}
-      {message && (
-        <div className={`mb-4 p-3 rounded-lg text-sm ${messageType === "error" ? "bg-red-100 text-red-700 border border-red-200" : "bg-green-100 text-green-700 border border-green-200"}`}>
-          {message}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <Input name="email" label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <Input
+          name="email"
+          label="Email"
+          type="email"
+          {...register("email")}
+          error={errors.email?.message}
+        />
 
         {/* Password */}
-
-        <Input name="password" label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <Input
+          name="password"
+          label="Password"
+          type="password"
+          {...register("password")}
+          error={errors.password?.message}
+        />
 
         {/* Remember + Forgot */}
         <div className="flex justify-between items-center text-sm">
@@ -62,9 +63,13 @@ export default function LoginForm() {
             Remember me
           </label>
 
-          <a href="#" className="text-blue-500 hover:underline">
+          <button
+            type="button"
+            onClick={() => navigate('/forgot-password')}
+            className="text-blue-500 hover:underline"
+          >
             Forgot password?
-          </a>
+          </button>
         </div>
 
         {/* Button */}
@@ -73,6 +78,7 @@ export default function LoginForm() {
           type="submit"
           variant="primary"
           loading={loading}
+          disabled={loading}
         />
       </form>
 
