@@ -28,9 +28,7 @@ const JoinQuiz = () => {
   const codeRegistration = register('code');
 
   const handleJoinQuiz = async ({ code }) => {
-    if (loading) {
-      return;
-    }
+    if (loading) return;
 
     if (!getAuthToken()) {
       toast.error('Please log in first to join a quiz');
