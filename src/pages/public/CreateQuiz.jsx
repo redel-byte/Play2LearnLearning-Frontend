@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useFieldArray } from 'react-hook-form';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -19,9 +20,10 @@ import Button from '../../components/ui/Button';
 import { createQuiz, fetchQuiz, publishQuiz, updateQuiz } from '../../api/quiz';
 import { getErrorMessage } from '../../api/api';
 import { getAuthToken } from '../../api/userManagment';
+import { useValidation } from '../../hooks/useValidation';
+import { quizSchema } from '../../validation/quiz.shema';
 
-const createEmptyQuestion = (id) => ({
-  id,
+const createEmptyQuestion = () => ({
   question: '',
   options: ['', '', '', ''],
   correctAnswer: 0,
@@ -29,17 +31,34 @@ const createEmptyQuestion = (id) => ({
   points: 1,
 });
 
-const normalizeQuestion = (question, index) => ({
-  id: question.id ?? index + 1,
-  question: question.prompt ?? '',
-  options: question.choices?.map((choice) => choice.label) ?? ['', '', '', ''],
-  correctAnswer: Math.max(
-    0,
-    question.choices?.findIndex((choice) => choice.is_correct) ?? 0,
-  ),
-  explanation: '',
-  points: question.points ?? 1,
+const createDefaultQuizValues = () => ({
+  title: '',
+  description: '',
+  timeLimit: '',
+  maxAttempts: 1,
+  passPercentage: 60,
+  isPublic: true,
+  questions: [createEmptyQuestion()],
 });
+
+const normalizeQuestion = (question) => {
+  const mappedOptions = question.choices?.map((choice) => choice.label) ?? [];
+  const options = [...mappedOptions.slice(0, 4)];
+
+  while (options.length < 4) {
+    options.push('');
+  }
+
+  const correctAnswerIndex = question.choices?.findIndex((choice) => choice.is_correct) ?? 0;
+
+  return {
+    question: question.prompt ?? '',
+    options,
+    correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0,
+    explanation: '',
+    points: question.points ?? 1,
+  };
+};
 
 const CreateQuiz = () => {
   const navigate = useNavigate();
@@ -47,13 +66,23 @@ const CreateQuiz = () => {
   const quizId = searchParams.get('quizId');
   const isEditing = Boolean(quizId);
 
-  const [quizTitle, setQuizTitle] = useState('');
-  const [quizDescription, setQuizDescription] = useState('');
-  const [timeLimit, setTimeLimit] = useState('');
-  const [maxAttempts, setMaxAttempts] = useState(1);
-  const [passPercentage, setPassPercentage] = useState(60);
-  const [isPublic, setIsPublic] = useState(true);
-  const [questions, setQuestions] = useState([createEmptyQuestion(1)]);
+  const defaultValues = useMemo(() => createDefaultQuizValues(), []);
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors },
+  } = useValidation(quizSchema, { defaultValues });
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'questions',
+  });
+
+  const watchedQuestions = watch('questions') ?? defaultValues.questions;
+  const isPublic = watch('isPublic');
+
   const [loading, setLoading] = useState(isEditing);
   const [savingDraft, setSavingDraft] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -67,17 +96,17 @@ const CreateQuiz = () => {
       setLoading(true);
       try {
         const quiz = await fetchQuiz(quizId);
-        setQuizTitle(quiz.title ?? '');
-        setQuizDescription(quiz.description ?? '');
-        setTimeLimit(quiz.time_limit_minutes ?? '');
-        setMaxAttempts(quiz.max_attempts ?? 1);
-        setPassPercentage(quiz.pass_percentage ?? 60);
-        setIsPublic(Boolean(quiz.is_public));
-        setQuestions(
-          quiz.questions?.length
+        reset({
+          title: quiz.title ?? '',
+          description: quiz.description ?? '',
+          timeLimit: quiz.time_limit_minutes ?? '',
+          maxAttempts: quiz.max_attempts ?? 1,
+          passPercentage: quiz.pass_percentage ?? 60,
+          isPublic: Boolean(quiz.is_public),
+          questions: quiz.questions?.length
             ? quiz.questions.map(normalizeQuestion)
-            : [createEmptyQuestion(1)],
-        );
+            : [createEmptyQuestion()],
+        });
       } catch (error) {
         toast.error(getErrorMessage(error, 'Failed to load quiz'));
         navigate('/private/my-quizzes');
@@ -87,113 +116,66 @@ const CreateQuiz = () => {
     };
 
     loadQuiz();
-  }, [quizId, navigate]);
+  }, [navigate, quizId, reset]);
 
   const stats = useMemo(() => ({
-    totalQuestions: questions.length,
-    totalPoints: questions.reduce((sum, question) => sum + Number(question.points || 0), 0),
-  }), [questions]);
+    totalQuestions: watchedQuestions.length,
+    totalPoints: watchedQuestions.reduce((sum, question) => sum + Number(question?.points || 0), 0),
+  }), [watchedQuestions]);
 
   const addQuestion = () => {
-    setQuestions((current) => [...current, createEmptyQuestion(current.length + 1)]);
+    append(createEmptyQuestion());
   };
 
-  const removeQuestion = (id) => {
-    if (questions.length === 1) {
+  const removeQuestion = (index) => {
+    if (fields.length === 1) {
       return;
     }
 
-    setQuestions((current) => current.filter((question) => question.id !== id));
-  };
-
-  const updateQuestion = (id, field, value) => {
-    setQuestions((current) => current.map((question) => (
-      question.id === id ? { ...question, [field]: value } : question
-    )));
-  };
-
-  const updateOption = (questionId, optionIndex, value) => {
-    setQuestions((current) => current.map((question) => (
-      question.id === questionId
-        ? {
-          ...question,
-          options: question.options.map((option, index) => (index === optionIndex ? value : option)),
-        }
-        : question
-    )));
+    remove(index);
   };
 
   const duplicateQuestions = () => {
-    setQuestions((current) => [
-      ...current,
-      ...current.map((question, index) => ({
-        ...question,
-        id: current.length + index + 1,
-      })),
-    ]);
+    append(watchedQuestions.map((question) => ({
+      ...createEmptyQuestion(),
+      ...question,
+      options: [...(question?.options ?? ['', '', '', '])],
+    })));
   };
 
-  const validateForm = () => {
-    if (!getAuthToken()) {
-      toast.error('Please log in first to save your quiz');
-      navigate('/auth/login');
-      return false;
-    }
-
-    if (quizTitle.trim().length < 3) {
-      toast.error('Quiz title must be at least 3 characters');
-      return false;
-    }
-
-    for (const [index, question] of questions.entries()) {
-      if (question.question.trim().length < 3) {
-        toast.error(`Question ${index + 1} needs a prompt`);
-        return false;
-      }
-
-      const filledOptions = question.options.filter((option) => option.trim());
-      if (filledOptions.length < 2) {
-        toast.error(`Question ${index + 1} needs at least 2 answer choices`);
-        return false;
-      }
-
-      if (!filledOptions[question.correctAnswer]) {
-        toast.error(`Question ${index + 1} needs a valid correct answer`);
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  const buildPayload = () => ({
-    title: quizTitle.trim(),
-    description: quizDescription.trim() || null,
-    is_public: isPublic,
-    time_limit_minutes: timeLimit ? Number(timeLimit) : null,
-    max_attempts: Number(maxAttempts),
-    pass_percentage: Number(passPercentage),
-    questions: questions.map((question, index) => {
+  const buildPayload = (values) => ({
+    title: values.title.trim(),
+    description: values.description?.trim() || null,
+    is_public: values.isPublic,
+    time_limit_minutes: values.timeLimit ? Number(values.timeLimit) : null,
+    max_attempts: Number(values.maxAttempts),
+    pass_percentage: Number(values.passPercentage),
+    questions: values.questions.map((question, index) => {
       const sanitizedOptions = question.options
-        .map((option) => option.trim())
-        .filter(Boolean);
+        .map((option, originalIndex) => ({
+          label: option.trim(),
+          originalIndex,
+        }))
+        .filter(({ label }) => label);
 
       return {
         type: 'single_choice',
         prompt: question.question.trim(),
         points: Number(question.points) || 1,
         position: index + 1,
-        choices: sanitizedOptions.map((option, optionIndex) => ({
-          label: option,
-          is_correct: optionIndex === question.correctAnswer,
+        choices: sanitizedOptions.map(({ label, originalIndex }, optionIndex) => ({
+          label,
+          is_correct: originalIndex === Number(question.correctAnswer),
           position: optionIndex + 1,
         })),
       };
     }),
   });
 
-  const saveQuiz = async (shouldPublish) => {
-    if (!validateForm()) {
+  const saveQuiz = async (values, shouldPublish) => {
+    if (!getAuthToken()) {
+      toast.error('Please log in first to save your quiz');
+      navigate('/auth/login');
       return;
     }
 
@@ -201,7 +183,7 @@ const CreateQuiz = () => {
     setBusy(true);
 
     try {
-      const payload = buildPayload();
+      const payload = buildPayload(values);
       const quiz = isEditing
         ? await updateQuiz(quizId, payload)
         : await createQuiz(payload);
@@ -218,6 +200,9 @@ const CreateQuiz = () => {
       setBusy(false);
     }
   };
+
+  const handleSaveDraft = handleSubmit((values) => saveQuiz(values, false));
+  const handlePublish = handleSubmit((values) => saveQuiz(values, true));
 
   if (loading) {
     return (
@@ -273,21 +258,24 @@ const CreateQuiz = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Quiz Title *</label>
                   <input
                     type="text"
-                    value={quizTitle}
-                    onChange={(event) => setQuizTitle(event.target.value)}
                     placeholder="Enter an engaging title for your quiz"
                     className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    {...register('title')}
                   />
+                  {errors.title?.message && (
+                    <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                      {errors.title.message}
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                   <textarea
-                    value={quizDescription}
-                    onChange={(event) => setQuizDescription(event.target.value)}
-                    placeholder="Describe what your quiz is about..."
                     rows={3}
+                    placeholder="Describe what your quiz is about..."
                     className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    {...register('description')}
                   />
                 </div>
 
@@ -299,24 +287,32 @@ const CreateQuiz = () => {
                     </label>
                     <input
                       type="number"
-                      value={timeLimit}
-                      onChange={(event) => setTimeLimit(event.target.value)}
                       min="1"
                       max="1440"
                       className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      {...register('timeLimit')}
                     />
+                    {errors.timeLimit?.message && (
+                      <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                        {errors.timeLimit.message}
+                      </div>
+                    )}
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Maximum Attempts</label>
                     <input
                       type="number"
-                      value={maxAttempts}
-                      onChange={(event) => setMaxAttempts(event.target.value)}
                       min="1"
                       max="20"
                       className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      {...register('maxAttempts')}
                     />
+                    {errors.maxAttempts?.message && (
+                      <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                        {errors.maxAttempts.message}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -325,21 +321,24 @@ const CreateQuiz = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Pass Percentage</label>
                     <input
                       type="number"
-                      value={passPercentage}
-                      onChange={(event) => setPassPercentage(event.target.value)}
                       min="0"
                       max="100"
                       className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      {...register('passPercentage')}
                     />
+                    {errors.passPercentage?.message && (
+                      <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                        {errors.passPercentage.message}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-end">
                     <label className="flex items-center gap-3 text-sm font-medium text-gray-700">
                       <input
                         type="checkbox"
-                        checked={isPublic}
-                        onChange={(event) => setIsPublic(event.target.checked)}
                         className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        {...register('isPublic')}
                       />
                       Make quiz public for learners
                     </label>
@@ -352,10 +351,17 @@ const CreateQuiz = () => {
 
         <section className="mb-10">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <FontAwesomeIcon icon={faQuestionCircle} className="text-blue-600" />
-              Questions ({questions.length})
-            </h2>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <FontAwesomeIcon icon={faQuestionCircle} className="text-blue-600" />
+                Questions ({fields.length})
+              </h2>
+              {errors.questions?.message && (
+                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {errors.questions.message}
+                </div>
+              )}
+            </div>
             <div className="flex gap-3">
               <Button
                 onClick={duplicateQuestions}
@@ -371,87 +377,103 @@ const CreateQuiz = () => {
           </div>
 
           <div className="space-y-6">
-            {questions.map((question, questionIndex) => (
-              <Card key={question.id} className="bg-white rounded-2xl shadow-sm border border-gray-100">
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Question {questionIndex + 1}</h3>
-                    {questions.length > 1 && (
-                      <Button
-                        onClick={() => removeQuestion(question.id)}
-                        className="text-red-500 hover:text-red-700"
-                        textContent={<FontAwesomeIcon icon={faTrash} />}
-                      />
-                    )}
-                  </div>
+            {fields.map((field, questionIndex) => {
+              const questionErrors = errors.questions?.[questionIndex] || {};
+              const currentQuestion = watchedQuestions?.[questionIndex] || createEmptyQuestion();
 
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Question Text *</label>
-                      <textarea
-                        value={question.question}
-                        onChange={(event) => updateQuestion(question.id, 'question', event.target.value)}
-                        placeholder="Enter your question here..."
-                        rows={2}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+              return (
+                <Card key={field.id} className="bg-white rounded-2xl shadow-sm border border-gray-100">
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Question {questionIndex + 1}</h3>
+                      {fields.length > 1 && (
+                        <Button
+                          onClick={() => removeQuestion(questionIndex)}
+                          className="text-red-500 hover:text-red-700"
+                          textContent={<FontAwesomeIcon icon={faTrash} />}
+                        />
+                      )}
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Points</label>
-                      <input
-                        type="number"
-                        value={question.points}
-                        min="1"
-                        max="100"
-                        onChange={(event) => updateQuestion(question.id, 'points', event.target.value)}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Answer Options *</label>
-                      <div className="space-y-2">
-                        {question.options.map((option, optionIndex) => (
-                          <div key={optionIndex} className="flex items-center gap-3">
-                            <input
-                              type="radio"
-                              name={`correct-${question.id}`}
-                              checked={Number(question.correctAnswer) === optionIndex}
-                              onChange={() => updateQuestion(question.id, 'correctAnswer', optionIndex)}
-                              className="w-4 h-4 text-blue-600"
-                            />
-                            <input
-                              type="text"
-                              value={option}
-                              onChange={(event) => updateOption(question.id, optionIndex, event.target.value)}
-                              placeholder={`Option ${optionIndex + 1}`}
-                              className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            {Number(question.correctAnswer) === optionIndex && (
-                              <span className="text-green-600 text-sm font-medium">
-                                <FontAwesomeIcon icon={faStar} /> Correct
-                              </span>
-                            )}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Question Text *</label>
+                        <textarea
+                          rows={2}
+                          placeholder="Enter your question here..."
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          {...register(`questions.${questionIndex}.question`)}
+                        />
+                        {questionErrors.question?.message && (
+                          <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                            {questionErrors.question.message}
                           </div>
-                        ))}
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Points</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          {...register(`questions.${questionIndex}.points`)}
+                        />
+                        {questionErrors.points?.message && (
+                          <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                            {questionErrors.points.message}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Answer Options *</label>
+                        <div className="space-y-2">
+                          {currentQuestion.options.map((option, optionIndex) => (
+                            <div key={`${field.id}-${optionIndex}`} className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                value={optionIndex}
+                                checked={Number(currentQuestion.correctAnswer ?? 0) === optionIndex}
+                                className="w-4 h-4 text-blue-600"
+                                {...register(`questions.${questionIndex}.correctAnswer`, { valueAsNumber: true })}
+                              />
+                              <input
+                                type="text"
+                                placeholder={`Option ${optionIndex + 1}`}
+                                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                {...register(`questions.${questionIndex}.options.${optionIndex}`)}
+                              />
+                              {Number(currentQuestion.correctAnswer ?? 0) === optionIndex && (
+                                <span className="text-green-600 text-sm font-medium">
+                                  <FontAwesomeIcon icon={faStar} /> Correct
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        {(questionErrors.options?.message || questionErrors.correctAnswer?.message) && (
+                          <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                            {questionErrors.options?.message || questionErrors.correctAnswer?.message}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Explanation (Optional)</label>
+                        <textarea
+                          rows={2}
+                          placeholder="Keep notes for later improvements"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          {...register(`questions.${questionIndex}.explanation`)}
+                        />
                       </div>
                     </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Explanation (Optional)</label>
-                      <textarea
-                        value={question.explanation}
-                        onChange={(event) => updateQuestion(question.id, 'explanation', event.target.value)}
-                        placeholder="Keep notes for later improvements"
-                        rows={2}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         </section>
 
@@ -463,13 +485,13 @@ const CreateQuiz = () => {
           />
           <Button
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2"
-            onClick={() => saveQuiz(false)}
+            onClick={handleSaveDraft}
             loading={savingDraft}
             textContent={<><FontAwesomeIcon icon={faSave} /> {savingDraft ? 'Saving...' : 'Save as Draft'}</>}
           />
           <Button
             className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2"
-            onClick={() => saveQuiz(true)}
+            onClick={handlePublish}
             loading={publishing}
             textContent={<><FontAwesomeIcon icon={faArrowRight} /> {publishing ? 'Publishing...' : 'Publish Quiz'}</>}
           />
