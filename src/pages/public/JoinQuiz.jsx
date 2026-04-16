@@ -14,7 +14,12 @@ import { joinQuizSchema } from '../../validation/joinQuiz.shema';
 const JoinQuiz = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useValidation(joinQuizSchema, {
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useValidation(joinQuizSchema, {
     defaultValues: {
       code: '',
     },

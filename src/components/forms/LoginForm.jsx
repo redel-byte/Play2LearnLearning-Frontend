@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Input from "../ui/Input";
 import toast from "react-hot-toast";
 import Button from "../ui/Button";
 import { login } from "../../api/auth";
 import { useValidation } from "../../hooks/useValidation";
 import { loginSchema } from "../../validation/login.shema";
+import { clearStoredUser, setStoredUser } from "../../api/userManagment";
 
 
 export default function LoginForm() {
@@ -19,14 +20,17 @@ export default function LoginForm() {
     setLoading(true);
     try {
       const res = await login(data.email, data.password)
+      clearStoredUser();
       if (remeberMe) {
         localStorage.setItem('user', JSON.stringify(res))
+      } else {
+        sessionStorage.setItem('user', JSON.stringify(res))
       }
-      sessionStorage.setItem('user', JSON.stringify(res))
+      setStoredUser(res);
       toast.success(res.message);
-      navigate('/');
+      navigate(res.user?.is_admin ? '/private/admin' : '/');
     } catch (err) {
-      toast.error(err.response?.message || "Login failed");
+      toast.error(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -47,7 +51,6 @@ export default function LoginForm() {
           error={errors.email?.message}
         />
 
-        {/* Password */}
         <Input
           name="password"
           label="Password"
@@ -56,7 +59,6 @@ export default function LoginForm() {
           error={errors.password?.message}
         />
 
-        {/* Remember + Forgot */}
         <div className="flex justify-between items-center text-sm">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={remeberMe} onChange={(e) => { setRemeberMe(e.target.checked) }} className="accent-blue-500" />
@@ -65,14 +67,13 @@ export default function LoginForm() {
 
           <button
             type="button"
-            onClick={() => navigate('/forgot-password')}
+            onClick={() => navigate('/auth/forgot-password')}
             className="text-blue-500 hover:underline"
           >
             Forgot password?
           </button>
         </div>
 
-        {/* Button */}
         <Button
           textContent="Sign In"
           type="submit"
@@ -82,13 +83,13 @@ export default function LoginForm() {
         />
       </form>
 
-      {/* Register */}
       <p className="text-sm text-center mt-4">
         Don't have an account?{" "}
-        <a href="/register" className="text-blue-500 hover:underline">
+        <Link to="/auth/register" className="text-blue-500 hover:underline">
           Register
-        </a>
+        </Link>
       </p>
     </div>
   );
 }
+

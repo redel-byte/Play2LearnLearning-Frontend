@@ -1,6 +1,7 @@
 import { forwardRef } from 'react';
 
 const Input = forwardRef(({ name, label, type, value, onChange, placeholder, error, variant = 'primary', ...rest }, ref) => {
+
     const getVariantClasses = () => {
         switch (variant) {
             case 'secondary':
@@ -35,12 +36,12 @@ const Input = forwardRef(({ name, label, type, value, onChange, placeholder, err
                 onChange={onChange}
                 name={name}
                 id={name}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-colors ${getVariantClasses()}`}
+                className={`w-full px-3 py-2 border rounded-t-md shadow-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-colors ${getVariantClasses()}`}
                 placeholder={placeholder}
                 {...rest}
             />
             {error && (
-                <div className="mt-1 text-sm text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-b-sm px-2 py-1">
                     {error}
                 </div>
             )}
