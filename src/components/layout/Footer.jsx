@@ -2,7 +2,7 @@ import React from 'react';
 
 const Footer = () => {
     return (
-        <footer className="py-12 text-white bg-gray-900">
+        <footer className="py-12 text-white bg-gray-900" style={{ position: 'relative', zIndex: 100 }}>
             <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
                     <div>
@@ -17,19 +17,19 @@ const Footer = () => {
                     <div>
                         <h3 className="mb-4 font-semibold">Liens utiles</h3>
                         <ul className="space-y-2 text-gray-400">
-                            <li><a href="#" className="transition hover:text-purple-400">À propos</a></li>
-                            <li><a href="#" className="transition hover:text-purple-400">Services</a></li>
-                            <li><a href="#" className="transition hover:text-purple-400">Contact</a></li>
-                            <li><a href="#" className="transition hover:text-purple-400">FAQ</a></li>
+                            <li><a href="/aboutUs" className="transition hover:text-purple-400">About us</a></li>
+                            <li><a href="/services" className="transition hover:text-purple-400">Services</a></li>
+                            <li><a href="/contact" className="transition hover:text-purple-400">Contact</a></li>
+                            <li><a href="/faq" className="transition hover:text-purple-400">FAQ</a></li>
                         </ul>
                     </div>
                     <div>
-                        <h3 className="mb-4 font-semibold">Languages</h3>
+                        <h3 className="mb-4 font-semibold">Categorys</h3>
                         <ul className="space-y-2 text-gray-400">
-                            <li><a href="#" className="transition hover:text-purple-400">JavaScript</a></li>
-                            <li><a href="#" className="transition hover:text-purple-400">Python</a></li>
-                            <li><a href="#" className="transition hover:text-purple-400">Html</a></li>
-                            <li><a href="#" className="transition hover:text-purple-400">CSS</a></li>
+                            <li><a href="/science-nature" className="transition hover:text-purple-400">Science & Nature</a></li>
+                            <li><a href="/programming" className="transition hover:text-purple-400">Programming</a></li>
+                            <li><a href="/history-politics" className="transition hover:text-purple-400">History & Politics</a></li>
+                            <li><a href="/entertainment" className="transition hover:text-purple-400">Entertainment</a></li>
                         </ul>
                     </div>
                     <div>
@@ -59,7 +59,7 @@ const Footer = () => {
                     </div>
                 </div>
                 <div className="pt-8 mt-8 text-center text-gray-400 border-t border-gray-800">
-                    <p>&copy; 2024 Play2LearnLearning. Tous droits réservés.</p>
+                    <p>&copy; 2026 Play2LearnLearning. Tous droits réservés.</p>
                 </div>
             </div>
         </footer>

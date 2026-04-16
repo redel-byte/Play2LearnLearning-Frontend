@@ -115,7 +115,6 @@ export default function ResetPassword() {
           />
         </form>
 
-        {/* Back to Login */}
         <div className="text-center mt-6">
           <button
             type="button"

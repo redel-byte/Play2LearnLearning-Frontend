@@ -1,4 +1,4 @@
-const Input = ({ name, label, type, value, onChange, placeholder, error, variant = 'primary' }) => {
+const Input = ({ name, label, type, value, onChange, placeholder, error, variant = 'primary', ...rest }) => {
     const getVariantClasses = () => {
         switch (variant) {
             case 'secondary':
@@ -7,7 +7,7 @@ const Input = ({ name, label, type, value, onChange, placeholder, error, variant
                 return 'border-green-300 focus:border-green-500 focus:ring-green-500';
             case 'danger':
                 return 'border-red-300 focus:border-red-500 focus:ring-red-500';
-            default: // primary
+            default:
                 return 'border-blue-300 focus:border-blue-600 focus:ring-blue-600';
         }
     };
@@ -32,11 +32,12 @@ const Input = ({ name, label, type, value, onChange, placeholder, error, variant
                 onChange={onChange}
                 name={name}
                 id={name}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-colors ${getVariantClasses()}`}
+                className={`w-full px-3 py-2 border rounded-t-md shadow-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-colors ${getVariantClasses()}`}
                 placeholder={placeholder}
+                {...rest}
             />
             {error && (
-                <div className="mt-1 text-sm text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-b-sm px-2 py-1">
                     {error}
                 </div>
             )}

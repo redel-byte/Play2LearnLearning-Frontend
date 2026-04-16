@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { joinQuizByCode, startQuizAttempt } from '../../api/attempts';
 import { getErrorMessage } from '../../api/api';
 import { getAuthToken } from '../../api/userManagment';
+<<<<<<< Updated upstream
 import { useValidation } from '../../hooks/useValidation';
 import { joinQuizSchema } from '../../validation/joinQuiz.shema';
 
@@ -27,6 +28,15 @@ const JoinQuiz = () => {
       return;
     }
 
+=======
+
+const JoinQuiz = () => {
+  const navigate = useNavigate();
+  const [searchCode, setSearchCode] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleJoinQuiz = async (quizCode) => {
+>>>>>>> Stashed changes
     if (!getAuthToken()) {
       toast.error('Please log in first to join a quiz');
       navigate('/auth/login');
@@ -35,7 +45,11 @@ const JoinQuiz = () => {
 
     setLoading(true);
     try {
+<<<<<<< Updated upstream
       const joined = await joinQuizByCode(code);
+=======
+      const joined = await joinQuizByCode(quizCode);
+>>>>>>> Stashed changes
       const quizId = joined?.quiz?.id;
       const sessionId = joined?.session?.id;
 
@@ -57,6 +71,18 @@ const JoinQuiz = () => {
     }
   };
 
+<<<<<<< Updated upstream
+=======
+  const handleSearch = () => {
+    if (!searchCode.trim()) {
+      toast.error('Please enter a quiz code');
+      return;
+    }
+
+    handleJoinQuiz(searchCode.trim());
+  };
+
+>>>>>>> Stashed changes
   return (
     <main className="py-12 px-4 sm:px-6 lg:px-8" style={{ position: 'relative', zIndex: 99 }}>
       <div className="max-w-4xl mx-auto">
@@ -73,6 +99,7 @@ const JoinQuiz = () => {
               <FontAwesomeIcon icon={faGamepad} className="text-5xl mb-4" />
               <h2 className="text-2xl font-bold mb-4">Quick Join</h2>
               <p className="mb-6">Paste the access code from a public quiz or session.</p>
+<<<<<<< Updated upstream
 
               <form onSubmit={handleSubmit(handleJoinQuiz)} className="max-w-md mx-auto">
                 <div className="flex gap-3">
@@ -101,6 +128,23 @@ const JoinQuiz = () => {
                   </div>
                 )}
               </form>
+=======
+              <div className="max-w-md mx-auto flex gap-3">
+                <input
+                  type="text"
+                  placeholder="Enter quiz code"
+                  value={searchCode}
+                  onChange={(event) => setSearchCode(event.target.value.toUpperCase())}
+                  className="flex-1 px-4 py-3 rounded-lg border-0 text-gray-900 focus:outline-none  "
+                />
+                <Button
+                  textContent={loading ? 'Joining...' : 'Join'}
+                  variant="seccess"
+                  onClick={handleSearch}
+                  loading={loading}
+                />
+              </div>
+>>>>>>> Stashed changes
             </div>
           </Card>
         </section>
@@ -125,3 +169,7 @@ const JoinQuiz = () => {
 };
 
 export default JoinQuiz;
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes

@@ -26,4 +26,8 @@ export const registerShema = yup.object().shape({
             "Password must contain at least 8 characters, including at least one letter, one number, and one special character"
         )
         .required("Password is required"),
+    role: yup
+        .string()
+        .oneOf(["learner", "teacher"], "Please choose Student or Teacher")
+        .required("Role is required"),
 })

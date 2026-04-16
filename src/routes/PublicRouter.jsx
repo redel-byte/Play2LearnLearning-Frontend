@@ -10,6 +10,7 @@ import Pricing from '../pages/public/Pricing'
 import Library from '../pages/public/Library'
 import JoinQuiz from '../pages/public/JoinQuiz'
 import CreateQuiz from '../pages/public/CreateQuiz'
+import RouteNotFound from '../components/RouteNotFound'
 
 const PublicRouter = () => {
   return (
@@ -77,6 +78,7 @@ const PublicRouter = () => {
           <Footer />
         </>
       } />
+      <Route path="*" element={<RouteNotFound />} />
     </Routes>
   )
 }
