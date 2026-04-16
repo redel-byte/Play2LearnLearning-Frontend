@@ -1,4 +1,7 @@
-const Input = ({ name, label, type, value, onChange, placeholder, error, variant = 'primary', ...rest }) => {
+import { forwardRef } from 'react';
+
+const Input = forwardRef(({ name, label, type, value, onChange, placeholder, error, variant = 'primary', ...rest }, ref) => {
+
     const getVariantClasses = () => {
         switch (variant) {
             case 'secondary':
@@ -27,6 +30,7 @@ const Input = ({ name, label, type, value, onChange, placeholder, error, variant
                 {label}
             </label>
             <input
+                ref={ref}
                 type={type}
                 value={value}
                 onChange={onChange}
@@ -43,6 +47,8 @@ const Input = ({ name, label, type, value, onChange, placeholder, error, variant
             )}
         </div>
     );
-};
+});
+
+Input.displayName = 'Input';
 
 export default Input;

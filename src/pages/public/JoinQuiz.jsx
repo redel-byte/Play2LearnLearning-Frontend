@@ -8,13 +8,30 @@ import toast from 'react-hot-toast';
 import { joinQuizByCode, startQuizAttempt } from '../../api/attempts';
 import { getErrorMessage } from '../../api/api';
 import { getAuthToken } from '../../api/userManagment';
+import { useValidation } from '../../hooks/useValidation';
+import { joinQuizSchema } from '../../validation/joinQuiz.shema';
 
 const JoinQuiz = () => {
   const navigate = useNavigate();
-  const [searchCode, setSearchCode] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleJoinQuiz = async (quizCode) => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useValidation(joinQuizSchema, {
+    defaultValues: {
+      code: '',
+    },
+  });
+
+  const codeRegistration = register('code');
+
+  const handleJoinQuiz = async ({ code }) => {
+    if (loading) {
+      return;
+    }
+
     if (!getAuthToken()) {
       toast.error('Please log in first to join a quiz');
       navigate('/auth/login');
@@ -23,7 +40,7 @@ const JoinQuiz = () => {
 
     setLoading(true);
     try {
-      const joined = await joinQuizByCode(quizCode);
+      const joined = await joinQuizByCode(code);
       const quizId = joined?.quiz?.id;
       const sessionId = joined?.session?.id;
 
@@ -45,15 +62,6 @@ const JoinQuiz = () => {
     }
   };
 
-  const handleSearch = () => {
-    if (!searchCode.trim()) {
-      toast.error('Please enter a quiz code');
-      return;
-    }
-
-    handleJoinQuiz(searchCode.trim());
-  };
-
   return (
     <main className="py-12 px-4 sm:px-6 lg:px-8" style={{ position: 'relative', zIndex: 99 }}>
       <div className="max-w-4xl mx-auto">
@@ -70,21 +78,34 @@ const JoinQuiz = () => {
               <FontAwesomeIcon icon={faGamepad} className="text-5xl mb-4" />
               <h2 className="text-2xl font-bold mb-4">Quick Join</h2>
               <p className="mb-6">Paste the access code from a public quiz or session.</p>
-              <div className="max-w-md mx-auto flex gap-3">
-                <input
-                  type="text"
-                  placeholder="Enter quiz code"
-                  value={searchCode}
-                  onChange={(event) => setSearchCode(event.target.value.toUpperCase())}
-                  className="flex-1 px-4 py-3 rounded-lg border-0 text-gray-900 focus:outline-none  "
-                />
-                <Button
-                  textContent={loading ? 'Joining...' : 'Join'}
-                  variant="seccess"
-                  onClick={handleSearch}
-                  loading={loading}
-                />
-              </div>
+
+              <form onSubmit={handleSubmit(handleJoinQuiz)} className="max-w-md mx-auto">
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    placeholder="Enter quiz code"
+                    aria-invalid={Boolean(errors.code)}
+                    className="flex-1 px-4 py-3 rounded-lg border-0 text-gray-900 focus:outline-none"
+                    {...codeRegistration}
+                    onChange={(event) => {
+                      event.target.value = event.target.value.toUpperCase();
+                      codeRegistration.onChange(event);
+                    }}
+                  />
+                  <Button
+                    textContent={loading ? 'Joining...' : 'Join'}
+                    variant="success"
+                    type="submit"
+                    loading={loading}
+                  />
+                </div>
+
+                {errors.code?.message && (
+                  <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-left text-sm text-red-700">
+                    {errors.code.message}
+                  </div>
+                )}
+              </form>
             </div>
           </Card>
         </section>
@@ -109,4 +130,3 @@ const JoinQuiz = () => {
 };
 
 export default JoinQuiz;
-
