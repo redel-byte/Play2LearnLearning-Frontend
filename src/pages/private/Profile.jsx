@@ -1,13 +1,19 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Button from '../../components/ui/Button'
+import Input from '../../components/ui/Input'
 import toast from 'react-hot-toast'
-import { fetchAuthenticatedUser } from '../../api/auth'
+import { fetchAuthenticatedUser, updateMyProfile } from '../../api/auth'
 import { getCurrentUserProfile } from '../../api/userManagment'
+import { useValidation } from '../../hooks/useValidation'
+import { profileSchema } from '../../validation/profile.shema'
 
 const mapUserToForm = (user) => ({
   firstName: user?.first_name || '',
   lastName: user?.last_name || '',
   email: user?.email || '',
+})
+
+const mapUserToOverview = (user) => ({
   role: user?.is_admin ? 'Admin' : user?.is_teacher ? 'Teacher' : 'Learner',
   status: user?.is_active ? 'Active' : 'Inactive',
 })
@@ -60,10 +66,31 @@ const readBooleanLabel = (value) => {
   return 'Unknown'
 }
 
+const mapBackendFieldToFormField = (field) => {
+  switch (field) {
+    case 'first_name':
+      return 'firstName'
+    case 'last_name':
+      return 'lastName'
+    default:
+      return field
+  }
+}
+
 const Profile = () => {
   const [user, setUser] = useState(getCurrentUserProfile())
-  const [formData, setFormData] = useState(mapUserToForm(getCurrentUserProfile()))
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setError,
+    formState: { errors, isDirty },
+  } = useValidation(profileSchema, {
+    defaultValues: mapUserToForm(getCurrentUserProfile()),
+  })
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -71,7 +98,7 @@ const Profile = () => {
       try {
         const nextUser = await fetchAuthenticatedUser()
         setUser(nextUser)
-        setFormData(mapUserToForm(nextUser))
+        reset(mapUserToForm(nextUser))
       } catch (error) {
         toast.error(error.message || 'Failed to load profile')
       } finally {
@@ -80,20 +107,17 @@ const Profile = () => {
     }
 
     loadProfile()
-  }, [])
+  }, [reset])
 
-  const handleCancel = () => {
-    setFormData(mapUserToForm(user))
-    toast('Profile reloaded')
-  }
-
-  const fullName = [formData.firstName, formData.lastName].filter(Boolean).join(' ') || 'Play2Learn User'
-  const initials = (formData.firstName?.[0] || formData.email?.[0] || 'U').toUpperCase()
+  const watchedValues = watch()
+  const overview = mapUserToOverview(user)
+  const fullName = [watchedValues.firstName, watchedValues.lastName].filter(Boolean).join(' ') || 'Play2Learn User'
+  const initials = (watchedValues.firstName?.[0] || watchedValues.email?.[0] || 'U').toUpperCase()
   const roles = getRoleList(user)
   const permissions = user?.permission_names || []
   const overviewCards = [
-    { label: 'Account status', value: formData.status },
-    { label: 'Primary role', value: formData.role },
+    { label: 'Account status', value: overview.status },
+    { label: 'Primary role', value: overview.role },
     { label: 'Roles assigned', value: `${roles.length}` },
     { label: 'Permissions', value: `${permissions.length}` },
   ]
@@ -104,13 +128,58 @@ const Profile = () => {
     { label: 'Email verified', value: readBooleanLabel(Boolean(user?.email_verified_at)) },
   ]
 
+  const handleCancel = () => {
+    reset(mapUserToForm(user))
+    toast('Profile changes discarded')
+  }
+
+  const handleSave = async (data) => {
+    setSaving(true)
+
+    try {
+      const result = await updateMyProfile({
+        first_name: data.firstName.trim(),
+        last_name: data.lastName.trim(),
+        email: data.email.trim(),
+      })
+
+      setUser(result.user)
+      reset(mapUserToForm(result.user))
+      toast.success(result.message)
+    } catch (error) {
+      const validationErrors = error?.errors || error?.response?.data?.errors || {}
+
+      Object.entries(validationErrors).forEach(([field, messages]) => {
+        const formField = mapBackendFieldToFormField(field)
+        const message = Array.isArray(messages) ? messages[0] : messages
+
+        setError(formField, {
+          type: 'server',
+          message,
+        })
+      })
+
+      toast.error(error?.message || 'Failed to update profile')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const sessionSyncMessage = useMemo(() => {
+    if (user?.email_verified_at) {
+      return 'This page refreshes from the authenticated backend session, and profile edits update your stored session immediately.'
+    }
+
+    return 'This page refreshes from the authenticated backend session. If you change your email, verification status is cleared until the new address is verified.'
+  }, [user?.email_verified_at])
+
   return (
     <div className="min-h-screen z-50 relative py-12 ">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white shadow-lg rounded-3xl overflow-hidden border border-slate-200">
           <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-8">
             <h1 className="text-3xl font-bold text-white">My Profile</h1>
-            <p className="text-blue-100 mt-2">Live account data synced from the backend session.</p>
+            <p className="text-blue-100 mt-2">Update your account details and keep your session data in sync.</p>
           </div>
 
           <div className="p-6">
@@ -128,7 +197,7 @@ const Profile = () => {
                       </div>
                       <div className="min-w-0">
                         <h2 className="text-2xl font-bold text-slate-900">{fullName}</h2>
-                        <p className="text-slate-600 break-all">{formData.email || 'No email address available'}</p>
+                        <p className="text-slate-600 break-all">{watchedValues.email || 'No email address available'}</p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           {roles.map((role) => (
                             <span
@@ -142,26 +211,49 @@ const Profile = () => {
                       </div>
                     </div>
 
-                    <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm font-medium text-slate-500 mb-1">First Name</div>
-                        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900">
-                          {formData.firstName || 'Not provided'}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-slate-500 mb-1">Last Name</div>
-                        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900">
-                          {formData.lastName || 'Not provided'}
-                        </div>
-                      </div>
+                    <form className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={handleSubmit(handleSave)}>
+                      <Input
+                        name="firstName"
+                        label="First Name"
+                        type="text"
+                        placeholder="Enter your first name"
+                        error={errors.firstName?.message}
+                        {...register('firstName')}
+                      />
+                      <Input
+                        name="lastName"
+                        label="Last Name"
+                        type="text"
+                        placeholder="Enter your last name"
+                        error={errors.lastName?.message}
+                        {...register('lastName')}
+                      />
                       <div className="sm:col-span-2">
-                        <div className="text-sm font-medium text-slate-500 mb-1">Email</div>
-                        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 break-all">
-                          {formData.email || 'Not provided'}
-                        </div>
+                        <Input
+                          name="email"
+                          label="Email"
+                          type="email"
+                          placeholder="Enter your email address"
+                          error={errors.email?.message}
+                          {...register('email')}
+                        />
                       </div>
-                    </div>
+
+                      <div className="sm:col-span-2 flex justify-end gap-4 pt-2">
+                        <Button
+                          textContent="Reload"
+                          variant="secondary"
+                          onClick={handleCancel}
+                          disabled={!isDirty || saving}
+                        />
+                        <Button
+                          textContent={saving ? 'Saving...' : 'Save Profile'}
+                          type="submit"
+                          loading={saving}
+                          disabled={!isDirty || saving}
+                        />
+                      </div>
+                    </form>
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 bg-white p-6">
@@ -187,7 +279,7 @@ const Profile = () => {
                       <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
                         user?.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'
                       }`}>
-                        {formData.status}
+                        {overview.status}
                       </span>
                     </div>
 
@@ -227,18 +319,10 @@ const Profile = () => {
                     <div className="mt-5 rounded-2xl bg-slate-50 p-4 border border-slate-200">
                       <div className="text-sm font-medium text-slate-900">Session sync</div>
                       <div className="mt-1 text-sm text-slate-600">
-                        This page refreshes from the authenticated backend session so the information stays aligned with your latest account state.
+                        {sessionSyncMessage}
                       </div>
                     </div>
                   </div>
-                </div>
-
-                <div className="mt-8 flex justify-end space-x-4">
-                  <Button
-                    textContent="Reload"
-                    variant="secondary"
-                    onClick={handleCancel}
-                  />
                 </div>
               </>
             )}
