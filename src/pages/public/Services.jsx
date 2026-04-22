@@ -87,19 +87,7 @@ const Services = () => {
                             <li>• Sync across devices</li>
                         </ul>
                     </div>
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition group">
-                        <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-yellow-200 transition">
-                            <FontAwesomeIcon icon={faCertificate} className="w-6 h-6 text-yellow-600" />
-                        </div>
-                        <h3 className="text-xl font-bold mb-3">Certifications</h3>
-                        <p className="text-gray-600 mb-4">Earn certificates and badges to showcase your achievements and knowledge.</p>
-                        <ul className="text-sm text-gray-500 space-y-1">
-                            <li>• Course completion certificates</li>
-                            <li>• Skill badges</li>
-                            <li>• Shareable credentials</li>
-                        </ul>
-                    </div>
-                </div>
+                                    </div>
             </section>
 
             <section className="py-20 " style={{ position: 'relative', zIndex: 100 }}>

@@ -56,7 +56,7 @@ const Contact = () => {
                                 </div>
                                 <div>
                                     <h3 className="font-semibold mb-1">Email Us</h3>
-                                    <p className="text-gray-600">support@play2learnlearning.com</p>
+                                    <p className="text-gray-600">ridouanelhabib1@gmail.com</p>
                                     <p className="text-sm text-gray-500">We'll respond within 24 hours</p>
                                 </div>
                             </div>
@@ -67,8 +67,8 @@ const Contact = () => {
                                 </div>
                                 <div>
                                     <h3 className="font-semibold mb-1">Call Us</h3>
-                                    <p className="text-gray-600">+1 (555) 123-4567</p>
-                                    <p className="text-sm text-gray-500">Mon-Fri 9AM-6PM EST</p>
+                                    <p className="text-gray-600">+212 72157 2275</p>
+                                    <p className="text-sm text-gray-500">Fri 9AM-6PM EST</p>
                                 </div>
                             </div>
 
@@ -78,8 +78,8 @@ const Contact = () => {
                                 </div>
                                 <div>
                                     <h3 className="font-semibold mb-1">Visit Us</h3>
-                                    <p className="text-gray-600">123 Learning Street</p>
-                                    <p className="text-gray-600">Education City, EC 12345</p>
+                                    <p className="text-gray-600">Rue el ouahda hay touama biougra chtouka ait baha</p>
+                                    <p className="text-gray-600">Biougra</p>
                                     <p className="text-sm text-gray-500">By appointment only</p>
                                 </div>
                             </div>
@@ -90,9 +90,7 @@ const Contact = () => {
                                 </div>
                                 <div>
                                     <h3 className="font-semibold mb-1">Business Hours</h3>
-                                    <p className="text-gray-600">Monday - Friday: 9:00 AM - 6:00 PM</p>
-                                    <p className="text-gray-600">Saturday: 10:00 AM - 4:00 PM</p>
-                                    <p className="text-gray-600">Sunday: Closed</p>
+                                    <p className="text-gray-600">Friday: 9:00 AM - 6:00 PM</p>
                                 </div>
                             </div>
                         </div>
@@ -113,7 +111,7 @@ const Contact = () => {
                                     onChange={handleChange}
                                     required
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                                    placeholder="John Doe"
+                                    placeholder="Ridouane El habib"
                                 />
                             </div>
 
@@ -129,7 +127,7 @@ const Contact = () => {
                                     onChange={handleChange}
                                     required
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                                    placeholder="john@example.com"
+                                    placeholder="ridouanelhabib1@gmail.com"
                                 />
                             </div>
 
@@ -143,7 +141,7 @@ const Contact = () => {
                                     value={formData.subject}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                                 >
                                     <option value="">Select a subject</option>
                                     <option value="general">General Inquiry</option>

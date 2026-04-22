@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import Button from '../../components/ui/Button'
 import toast from 'react-hot-toast'
-import { fetchAuthenticatedUser } from '../../api/auth'
+import { fetchAuthenticatedUser, updateMyProfile } from '../../api/auth'
 import { getCurrentUserProfile } from '../../api/userManagment'
 
 const mapUserToForm = (user) => ({
@@ -64,6 +64,8 @@ const Profile = () => {
   const [user, setUser] = useState(getCurrentUserProfile())
   const [formData, setFormData] = useState(mapUserToForm(getCurrentUserProfile()))
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState({})
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -72,6 +74,7 @@ const Profile = () => {
         const nextUser = await fetchAuthenticatedUser()
         setUser(nextUser)
         setFormData(mapUserToForm(nextUser))
+        setErrors({})
       } catch (error) {
         toast.error(error.message || 'Failed to load profile')
       } finally {
@@ -84,7 +87,57 @@ const Profile = () => {
 
   const handleCancel = () => {
     setFormData(mapUserToForm(user))
+    setErrors({})
     toast('Profile reloaded')
+  }
+
+  const handleChange = (field) => (event) => {
+    const value = event.target.value
+
+    setFormData((current) => ({
+      ...current,
+      [field]: value,
+    }))
+
+    setErrors((current) => ({
+      ...current,
+      [field]: undefined,
+    }))
+  }
+
+  const hasChanges = (
+    formData.firstName !== mapUserToForm(user).firstName
+    || formData.lastName !== mapUserToForm(user).lastName
+    || formData.email !== mapUserToForm(user).email
+  )
+
+  const handleSave = async () => {
+    setSaving(true)
+    setErrors({})
+
+    try {
+      const { user: updatedUser, message } = await updateMyProfile({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+      })
+
+      setUser(updatedUser)
+      setFormData(mapUserToForm(updatedUser))
+      toast.success(message || 'Profile updated successfully')
+    } catch (error) {
+      if (error?.errors) {
+        setErrors({
+          firstName: error.errors.first_name?.[0],
+          lastName: error.errors.last_name?.[0],
+          email: error.errors.email?.[0],
+        })
+      }
+
+      toast.error(error?.message || error?.error || 'Failed to update profile')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const fullName = [formData.firstName, formData.lastName].filter(Boolean).join(' ') || 'Play2Learn User'
@@ -145,21 +198,54 @@ const Profile = () => {
                     <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <div className="text-sm font-medium text-slate-500 mb-1">First Name</div>
-                        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900">
-                          {formData.firstName || 'Not provided'}
-                        </div>
+                        <input
+                          type="text"
+                          value={formData.firstName}
+                          onChange={handleChange('firstName')}
+                          className={`w-full rounded-xl border bg-white px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 ${
+                            errors.firstName
+                              ? 'border-red-300 focus:ring-red-200'
+                              : 'border-slate-200 focus:ring-blue-200'
+                          }`}
+                          placeholder="First name"
+                        />
+                        {errors.firstName && (
+                          <p className="mt-2 text-sm text-red-600">{errors.firstName}</p>
+                        )}
                       </div>
                       <div>
                         <div className="text-sm font-medium text-slate-500 mb-1">Last Name</div>
-                        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900">
-                          {formData.lastName || 'Not provided'}
-                        </div>
+                        <input
+                          type="text"
+                          value={formData.lastName}
+                          onChange={handleChange('lastName')}
+                          className={`w-full rounded-xl border bg-white px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 ${
+                            errors.lastName
+                              ? 'border-red-300 focus:ring-red-200'
+                              : 'border-slate-200 focus:ring-blue-200'
+                          }`}
+                          placeholder="Last name"
+                        />
+                        {errors.lastName && (
+                          <p className="mt-2 text-sm text-red-600">{errors.lastName}</p>
+                        )}
                       </div>
                       <div className="sm:col-span-2">
                         <div className="text-sm font-medium text-slate-500 mb-1">Email</div>
-                        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 break-all">
-                          {formData.email || 'Not provided'}
-                        </div>
+                        <input
+                          type="email"
+                          value={formData.email}
+                          onChange={handleChange('email')}
+                          className={`w-full rounded-xl border bg-white px-4 py-3 text-slate-900 break-all focus:outline-none focus:ring-2 ${
+                            errors.email
+                              ? 'border-red-300 focus:ring-red-200'
+                              : 'border-slate-200 focus:ring-blue-200'
+                          }`}
+                          placeholder="Email address"
+                        />
+                        {errors.email && (
+                          <p className="mt-2 text-sm text-red-600">{errors.email}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -235,9 +321,15 @@ const Profile = () => {
 
                 <div className="mt-8 flex justify-end space-x-4">
                   <Button
+                    textContent={saving ? 'Saving...' : 'Save Changes'}
+                    onClick={handleSave}
+                    disabled={!hasChanges || saving}
+                  />
+                  <Button
                     textContent="Reload"
                     variant="secondary"
                     onClick={handleCancel}
+                    disabled={saving}
                   />
                 </div>
               </>

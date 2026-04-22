@@ -139,7 +139,7 @@ const CreateQuiz = () => {
     append(watchedQuestions.map((question) => ({
       ...createEmptyQuestion(),
       ...question,
-      options: [...(question?.options ?? ['', '', '', '])],
+      options: [...(question?.options ?? ['', '', '', ''])],
     })));
   };
 
