@@ -4,14 +4,20 @@ import P2l from '../../assets/P2L.webp'
 import Button from '../../components/ui/Button'
 import toast from 'react-hot-toast';
 import { Logout } from '../../api/auth';
-import { getAuthStorageEventName, getPrimaryRole, getStoredUser } from '../../api/userManagment';
+import {
+    canManageQuizzes,
+    canManageUsers,
+    getAuthStorageEventName,
+    getStoredUser,
+} from '../../api/userManagment';
 
 
 const Navbar = () => {
     const navigate = useNavigate();
     const [userData, setUserData] = useState(getStoredUser());
     const user = userData?.user || null;
-    const primaryRole = getPrimaryRole();
+    const showQuizManagement = canManageQuizzes();
+    const showUserManagement = canManageUsers();
     const [isLoggedIn, setIsLoggedIn] = useState(!!userData);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -64,7 +70,9 @@ const Navbar = () => {
                     <Link to="/Plans" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300">Plans</Link>
                     <Link to="/library" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300">Library</Link>
                     <Link to="/join-quiz" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300">Join Quiz</Link>
-                    <Link to="/create-quiz" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300">Create Quiz</Link>
+                    {showQuizManagement && (
+                        <Link to="/create-quiz" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300">Create Quiz</Link>
+                    )}
                 </div>
 
                 <div className="hidden md:flex items-center space-x-4">
@@ -100,10 +108,16 @@ const Navbar = () => {
                                     <Link to="/private/settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-200">
                                         Settings
                                     </Link>
-                                    <Link to="/private/my-quizzes" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-200">
-                                        My Quizzes
-                                    </Link>
-                                    {primaryRole === 'admin' && (
+                                    {showQuizManagement ? (
+                                        <Link to="/private/my-quizzes" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-200">
+                                            My Quizzes
+                                        </Link>
+                                    ) : (
+                                        <Link to="/private/quiz-history" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-200">
+                                            My Quiz History
+                                        </Link>
+                                    )}
+                                    {showUserManagement && (
                                         <Link to="/private/admin" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-200">
                                             Admin Dashboard
                                         </Link>
@@ -140,7 +154,9 @@ const Navbar = () => {
                         <Link to="/Plans" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300">Plans</Link>
                         <Link to="/library" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300">Library</Link>
                         <Link to="/join-quiz" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300">Join Quiz</Link>
-                        <Link to="/create-quiz" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300">Create Quiz</Link>
+                        {showQuizManagement && (
+                            <Link to="/create-quiz" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300">Create Quiz</Link>
+                        )}
 
                         <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200">
                             {!isLoggedIn ? (
@@ -165,10 +181,16 @@ const Navbar = () => {
                                     <Link to="/private/settings" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300 pl-2">
                                         Settings
                                     </Link>
-                                    <Link to="/private/my-quizzes" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300 pl-2">
-                                        My Quizzes
-                                    </Link>
-                                    {primaryRole === 'admin' && (
+                                    {showQuizManagement ? (
+                                        <Link to="/private/my-quizzes" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300 pl-2">
+                                            My Quizzes
+                                        </Link>
+                                    ) : (
+                                        <Link to="/private/quiz-history" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300 pl-2">
+                                            My Quiz History
+                                        </Link>
+                                    )}
+                                    {showUserManagement && (
                                         <Link to="/private/admin" className="text-gray-700 hover:text-blue-600 font-medium transition duration-300 pl-2">
                                             Admin Dashboard
                                         </Link>
