@@ -51,13 +51,13 @@ const normalizeQuestion = (question) => {
 
   const correctAnswerIndex = question.choices?.findIndex((choice) => choice.is_correct) ?? 0;
 
-  return {
-    question: question.prompt ?? '',
-    options,
-    correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0,
-    explanation: '',
-    points: question.points ?? 1,
-  };
+    return {
+      question: question.prompt ?? '',
+      options,
+      correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0,
+      explanation: question.explanation ?? '',
+      points: question.points ?? 1,
+    };
 };
 
 const CreateQuiz = () => {
@@ -158,11 +158,12 @@ const CreateQuiz = () => {
         }))
         .filter(({ label }) => label);
 
-      return {
-        type: 'single_choice',
-        prompt: question.question.trim(),
-        points: Number(question.points) || 1,
-        position: index + 1,
+        return {
+          type: 'single_choice',
+          prompt: question.question.trim(),
+          explanation: question.explanation?.trim() || null,
+          points: Number(question.points) || 1,
+          position: index + 1,
         choices: sanitizedOptions.map(({ label, originalIndex }, optionIndex) => ({
           label,
           is_correct: originalIndex === Number(question.correctAnswer),
