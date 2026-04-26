@@ -105,3 +105,40 @@ export const getPrimaryRole = () => {
     return user?.roles?.[0]?.name || null;
 };
 
+const getPermissionName = (permission) =>
+    typeof permission === 'string' ? permission : permission?.name;
+
+export const getCurrentUserPermissions = () => {
+    const user = getCurrentUserProfile();
+
+    const permissionNames = Array.isArray(user?.permission_names)
+        ? user.permission_names
+        : [
+            ...(user?.permissions ?? []).map(getPermissionName),
+            ...(user?.direct_permissions ?? []).map(getPermissionName),
+        ];
+
+    return [...new Set(permissionNames.filter(Boolean))];
+};
+
+export const hasStoredPermission = (permission) =>
+    getCurrentUserPermissions().includes(permission);
+
+export const hasAnyStoredPermission = (permissions = []) =>
+    permissions.some((permission) => hasStoredPermission(permission));
+
+export const canManageQuizzes = () => {
+    const role = getPrimaryRole();
+
+    return role === 'admin'
+        || role === 'teacher'
+        || hasStoredPermission('create_quiz');
+};
+
+export const canManageUsers = () => {
+    const role = getPrimaryRole();
+
+    return role === 'admin'
+        || hasAnyStoredPermission(['view_user', 'edit_user', 'manage_roles']);
+};
+
