@@ -1,12 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAuthToken, getPrimaryRole, getStoredUser } from '../api/userManagment';
+import { getAuthToken, getPrimaryRole, getStoredUser, hasAnyStoredPermission } from '../api/userManagment';
 import toast from 'react-hot-toast';
 
-const AuthGuard = ({ children, requiredRole = null }) => {
+const getDefaultPathForRole = (role) => {
+  if (role === 'teacher' || role === 'admin') {
+    return '/private/my-quizzes';
+  }
+
+  return '/private/quiz-history';
+};
+
+const AuthGuard = ({
+  children,
+  requiredRole = null,
+  requiredRoles = null,
+  requiredPermissions = null,
+}) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+  const requiredRolesKey = (requiredRoles ?? []).join('|');
+  const requiredPermissionsKey = (requiredPermissions ?? []).join('|');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -15,8 +30,9 @@ const AuthGuard = ({ children, requiredRole = null }) => {
       
         if (!token) {
           toast.error('Please login to access this page');
-        navigate('/auth/login');
-        return;
+          setLoading(false);
+          navigate('/auth/login', { replace: true });
+          return;
       }
 
       try {
@@ -27,7 +43,8 @@ const AuthGuard = ({ children, requiredRole = null }) => {
           toast.error('Session expired. Please login again');
           localStorage.clear();
           sessionStorage.clear();
-          navigate('/auth/login');
+          setLoading(false);
+          navigate('/auth/login', { replace: true });
           return;
         }
 
@@ -35,14 +52,27 @@ const AuthGuard = ({ children, requiredRole = null }) => {
           toast.error('Your account is inactive');
           localStorage.clear();
           sessionStorage.clear();
-          navigate('/auth/login');
+          setLoading(false);
+          navigate('/auth/login', { replace: true });
           return;
         }
 
         const currentRole = getPrimaryRole();
-        if (requiredRole && currentRole !== requiredRole) {
-          toast.error(`Access denied. ${requiredRole} role required`);
-          navigate('/private/profile');
+        const allowedRoles = requiredRoles?.length > 0
+          ? requiredRoles
+          : requiredRole
+            ? [requiredRole]
+            : [];
+
+        const hasRoleAccess = allowedRoles.length === 0 || allowedRoles.includes(currentRole);
+        const permissionRequirements = requiredPermissions ?? [];
+        const hasPermissionAccess = permissionRequirements.length === 0
+          || hasAnyStoredPermission(permissionRequirements);
+
+        if (!hasRoleAccess && !hasPermissionAccess) {
+          toast.error('Access denied for your account type');
+          setLoading(false);
+          navigate(getDefaultPathForRole(currentRole), { replace: true });
           return;
         }
 
@@ -52,7 +82,8 @@ const AuthGuard = ({ children, requiredRole = null }) => {
         toast.error('Invalid session. Please login again');
         localStorage.clear();
         sessionStorage.clear();
-        navigate('/auth/login');
+        setLoading(false);
+        navigate('/auth/login', { replace: true });
         return;
       } finally {
         setLoading(false);
@@ -60,7 +91,7 @@ const AuthGuard = ({ children, requiredRole = null }) => {
     };
 
     checkAuth();
-  }, [navigate, requiredRole]);
+  }, [navigate, requiredRole, requiredRolesKey, requiredPermissionsKey]);
 
   if (loading) {
     return (
