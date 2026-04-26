@@ -1,5 +1,5 @@
 import * as yup from "yup"
-
+import { passwordMessage, passwordRegex } from "./passwordRules";
 
 export const registerShema = yup.object().shape({
     firstName: yup
@@ -20,10 +20,9 @@ export const registerShema = yup.object().shape({
         .required("Email is required"),
     password: yup
         .string()
-        .min(8, "Password shoud be 8 symbols")
         .matches(
-            /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/,
-            "Password must contain at least 8 characters, including at least one letter, one number, and one special character"
+            passwordRegex,
+            passwordMessage
         )
         .required("Password is required"),
     role: yup
