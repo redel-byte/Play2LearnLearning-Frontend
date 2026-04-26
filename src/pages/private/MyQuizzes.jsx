@@ -31,7 +31,7 @@ const MyQuizzes = () => {
   const loadQuizzes = async () => {
     setLoading(true);
     try {
-      const response = await fetchQuizzes();
+      const response = await fetchQuizzes({ mine_only: true });
       setQuizzes(response.data ?? []);
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to load quizzes'));
@@ -107,7 +107,14 @@ const MyQuizzes = () => {
     }
   };
 
-  const handleViewHistory = () => {
+  const handleViewHistory = (quizIdOrQuiz = null) => {
+    const quizId = typeof quizIdOrQuiz === 'object' ? quizIdOrQuiz?.id : quizIdOrQuiz;
+
+    if (typeof quizId === 'string' && quizId.length > 0) {
+      navigate(`/private/quizzes/${quizId}/results`);
+      return;
+    }
+
     navigate('/private/quiz-history');
   };
 
@@ -156,7 +163,7 @@ const MyQuizzes = () => {
             <p className="text-gray-600 mt-2">Manage, update, publish, and clean up the quizzes you created.</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button textContent="View History" variant="secondary" onClick={handleViewHistory} />
+            <Button textContent="View History" variant="secondary" onClick={() => handleViewHistory()} />
             <Button textContent="Create New Quiz" variant="primary" onClick={handleCreateQuiz} />
           </div>
         </div>
@@ -257,10 +264,10 @@ const MyQuizzes = () => {
                           </button>
                           {quiz.published_at && (
                             <button
-                              onClick={handleViewHistory}
+                              onClick={() => handleViewHistory(quiz.id)}
                               className="text-gray-700 hover:text-gray-900"
                             >
-                              History
+                              Results
                             </button>
                           )}
                           <button

@@ -111,7 +111,7 @@ const AdminDashboard = () => {
         permissions: user.direct_permissions?.map((permission) => permission.name) ?? [],
       };
 
-      await updateAdminUser(user.id, payload);
+      const updatedUser = await updateAdminUser(user.id, payload);
       toast.success('User updated successfully');
 
       setUsers((current) => current.map((item) => {
@@ -119,15 +119,7 @@ const AdminDashboard = () => {
           return item;
         }
 
-        return {
-          ...item,
-          is_active: payload.is_active,
-          is_admin: payload.roles.includes('admin'),
-          is_teacher: payload.roles.includes('teacher'),
-          is_learner: payload.roles.includes('learner'),
-          roles: payload.roles.map((name) => ({ name })),
-          direct_permissions: payload.permissions.map((name) => ({ name })),
-        };
+        return updatedUser;
       }));
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to update user'));

@@ -76,9 +76,9 @@ const QuizResults = () => {
   const questions = attempt.quiz?.questions ?? [];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen relative z-99 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="rounded-lg  p-6 mb-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-gray-900">Quiz Results</h1>
             <button
@@ -111,11 +111,11 @@ const QuizResults = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className=" p-4 rounded-lg">
               <div className="text-sm text-gray-600">Started</div>
               <div className="font-semibold">{attempt.started_at ? new Date(attempt.started_at).toLocaleString() : '-'}</div>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="p-4 rounded-lg">
               <div className="text-sm text-gray-600">Completed</div>
               <div className="font-semibold">{attempt.submitted_at ? new Date(attempt.submitted_at).toLocaleString() : 'Not completed'}</div>
             </div>
@@ -151,6 +151,13 @@ const QuizResults = () => {
                   <div className="mb-4">
                     <p className="text-gray-700">{question.prompt}</p>
                   </div>
+
+                  {question.explanation && (
+                    <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 p-3">
+                      <div className="text-sm font-semibold text-blue-900 mb-1">Explanation</div>
+                      <p className="text-sm text-blue-900">{question.explanation}</p>
+                    </div>
+                  )}
 
                   {question.type !== 'short_answer' ? (
                     <div className="space-y-2 mb-4">
