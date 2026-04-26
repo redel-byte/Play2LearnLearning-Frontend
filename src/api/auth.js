@@ -116,7 +116,7 @@ export const fetchAuthenticatedUser = async () => {
   } catch {
     try {
       const response = await apiClient.get('/user');
-      const user = response.data ?? null;
+      const user = response.data?.data ?? response.data ?? null;
       const storedUser = getStoredUser();
 
       if (storedUser && user) {
@@ -150,6 +150,15 @@ export const updateMyProfile = async (profileData) => {
       message: response.data?.message || 'Profile updated successfully',
       user,
     };
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const updateMyPassword = async (passwordData) => {
+  try {
+    const response = await apiClient.patch('/me/password', passwordData);
+    return response.data;
   } catch (error) {
     throw error.response?.data || error;
   }
