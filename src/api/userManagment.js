@@ -87,9 +87,7 @@ export const getAuthStorageEventName = () => AUTH_STORAGE_EVENT;
 
 export const getCurrentUserProfile = () => getStoredUser()?.user || null;
 
-export const getPrimaryRole = () => {
-    const user = getCurrentUserProfile();
-
+export const getUserPrimaryRole = (user) => {
     if (user?.is_admin) {
         return 'admin';
     }
@@ -105,12 +103,12 @@ export const getPrimaryRole = () => {
     return user?.roles?.[0]?.name || null;
 };
 
+export const getPrimaryRole = () => getUserPrimaryRole(getCurrentUserProfile());
+
 const getPermissionName = (permission) =>
     typeof permission === 'string' ? permission : permission?.name;
 
-export const getCurrentUserPermissions = () => {
-    const user = getCurrentUserProfile();
-
+export const getUserPermissions = (user) => {
     const permissionNames = Array.isArray(user?.permission_names)
         ? user.permission_names
         : [
@@ -121,24 +119,36 @@ export const getCurrentUserPermissions = () => {
     return [...new Set(permissionNames.filter(Boolean))];
 };
 
+export const getCurrentUserPermissions = () => getUserPermissions(getCurrentUserProfile());
+
+export const userHasPermission = (user, permission) =>
+    getUserPermissions(user).includes(permission);
+
 export const hasStoredPermission = (permission) =>
-    getCurrentUserPermissions().includes(permission);
+    userHasPermission(getCurrentUserProfile(), permission);
+
+export const userHasAnyPermission = (user, permissions = []) =>
+    permissions.some((permission) => userHasPermission(user, permission));
 
 export const hasAnyStoredPermission = (permissions = []) =>
-    permissions.some((permission) => hasStoredPermission(permission));
+    userHasAnyPermission(getCurrentUserProfile(), permissions);
 
-export const canManageQuizzes = () => {
-    const role = getPrimaryRole();
+export const userCanManageQuizzes = (user) => {
+    const role = getUserPrimaryRole(user);
 
     return role === 'admin'
         || role === 'teacher'
-        || hasStoredPermission('create_quiz');
+        || userHasPermission(user, 'create_quiz');
 };
 
-export const canManageUsers = () => {
-    const role = getPrimaryRole();
+export const canManageQuizzes = () => userCanManageQuizzes(getCurrentUserProfile());
+
+export const userCanManageUsers = (user) => {
+    const role = getUserPrimaryRole(user);
 
     return role === 'admin'
-        || hasAnyStoredPermission(['view_user', 'edit_user', 'manage_roles']);
+        || userHasAnyPermission(user, ['view_user', 'edit_user', 'manage_roles']);
 };
+
+export const canManageUsers = () => userCanManageUsers(getCurrentUserProfile());
 
