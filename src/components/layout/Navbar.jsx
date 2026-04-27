@@ -3,12 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import P2l from '../../assets/P2L.webp'
 import Button from '../../components/ui/Button'
 import toast from 'react-hot-toast';
-import { Logout } from '../../api/auth';
+import { fetchAuthenticatedUser, Logout } from '../../api/auth';
 import {
-    canManageQuizzes,
-    canManageUsers,
     getAuthStorageEventName,
     getStoredUser,
+    userCanManageQuizzes,
+    userCanManageUsers,
 } from '../../api/userManagment';
 
 
@@ -16,8 +16,8 @@ const Navbar = () => {
     const navigate = useNavigate();
     const [userData, setUserData] = useState(getStoredUser());
     const user = userData?.user || null;
-    const showQuizManagement = canManageQuizzes();
-    const showUserManagement = canManageUsers();
+    const showQuizManagement = userCanManageQuizzes(user);
+    const showUserManagement = userCanManageUsers(user);
     const [isLoggedIn, setIsLoggedIn] = useState(!!userData);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -36,6 +36,8 @@ const Navbar = () => {
         }
     };
     useEffect(() => {
+        let isMounted = true;
+
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setIsProfileDropdownOpen(false);
@@ -48,13 +50,35 @@ const Navbar = () => {
             setIsLoggedIn(!!nextUserData);
         };
 
+        const refreshAuthState = async () => {
+            if (!getStoredUser()) {
+                syncAuthState();
+                return;
+            }
+
+            try {
+                await fetchAuthenticatedUser();
+            } catch {
+                // The API interceptor handles invalid sessions; keep the navbar in sync with storage.
+            } finally {
+                if (isMounted) {
+                    syncAuthState();
+                }
+            }
+        };
+
         document.addEventListener('mousedown', handleClickOutside);
         window.addEventListener('storage', syncAuthState);
         window.addEventListener(getAuthStorageEventName(), syncAuthState);
+        window.addEventListener('focus', refreshAuthState);
+        refreshAuthState();
+
         return () => {
+            isMounted = false;
             document.removeEventListener('mousedown', handleClickOutside);
             window.removeEventListener('storage', syncAuthState);
             window.removeEventListener(getAuthStorageEventName(), syncAuthState);
+            window.removeEventListener('focus', refreshAuthState);
         };
     }, []);
 
