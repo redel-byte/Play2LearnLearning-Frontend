@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAuthToken, getPrimaryRole, getStoredUser, hasAnyStoredPermission } from '../api/userManagment';
+import { fetchAuthenticatedUser } from '../api/auth';
+import {
+  clearStoredUser,
+  getAuthToken,
+  getStoredUser,
+  getUserPrimaryRole,
+  userHasAnyPermission,
+} from '../api/userManagment';
 import toast from 'react-hot-toast';
 
 const getDefaultPathForRole = (role) => {
@@ -25,14 +32,17 @@ const AuthGuard = ({
 
   useEffect(() => {
     const checkAuth = async () => {
-        const token = getAuthToken();
-        const storedUser = getStoredUser();
+      setAuthorized(false);
+      setLoading(true);
+
+      const token = getAuthToken();
+      const storedUser = getStoredUser();
       
-        if (!token) {
-          toast.error('Please login to access this page');
-          setLoading(false);
-          navigate('/auth/login', { replace: true });
-          return;
+      if (!token) {
+        toast.error('Please login to access this page');
+        setLoading(false);
+        navigate('/auth/login', { replace: true });
+        return;
       }
 
       try {
@@ -41,23 +51,24 @@ const AuthGuard = ({
         
         if (payload.exp < now) {
           toast.error('Session expired. Please login again');
-          localStorage.clear();
-          sessionStorage.clear();
+          clearStoredUser();
           setLoading(false);
           navigate('/auth/login', { replace: true });
           return;
         }
 
-        if (!storedUser?.user?.is_active && storedUser?.user?.is_active !== undefined) {
+        const refreshedUser = await fetchAuthenticatedUser();
+        const currentUser = refreshedUser ?? storedUser?.user ?? null;
+
+        if (!currentUser?.is_active && currentUser?.is_active !== undefined) {
           toast.error('Your account is inactive');
-          localStorage.clear();
-          sessionStorage.clear();
+          clearStoredUser();
           setLoading(false);
           navigate('/auth/login', { replace: true });
           return;
         }
 
-        const currentRole = getPrimaryRole();
+        const currentRole = getUserPrimaryRole(currentUser);
         const allowedRoles = requiredRoles?.length > 0
           ? requiredRoles
           : requiredRole
@@ -67,7 +78,7 @@ const AuthGuard = ({
         const hasRoleAccess = allowedRoles.length === 0 || allowedRoles.includes(currentRole);
         const permissionRequirements = requiredPermissions ?? [];
         const hasPermissionAccess = permissionRequirements.length === 0
-          || hasAnyStoredPermission(permissionRequirements);
+          || userHasAnyPermission(currentUser, permissionRequirements);
 
         if (!hasRoleAccess && !hasPermissionAccess) {
           toast.error('Access denied for your account type');
@@ -80,8 +91,7 @@ const AuthGuard = ({
       } catch (error) {
         console.error('Token validation error:', error);
         toast.error('Invalid session. Please login again');
-        localStorage.clear();
-        sessionStorage.clear();
+        clearStoredUser();
         setLoading(false);
         navigate('/auth/login', { replace: true });
         return;
